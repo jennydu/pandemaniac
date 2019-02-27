@@ -9,19 +9,19 @@ from networkx.algorithms.approximation import min_weighted_dominating_set
 import random
 
 
-def import_graph(file):
+def import_graph(file, prob = 0.0):
 	with open(file) as f:
 		data_dict = json.load(f)
 	G = nx.Graph()
 	for node_id in data_dict:
 		s = np.random.uniform(0.0,1.0,1)
-		if s > 0.6:
+		if s > prob:
 			for neighbor in data_dict[node_id]:
 				G.add_edge(node_id, neighbor)
 	return G
 
 def write_seeds(seed_list, outfile):
-	file = open("results2/"+outfile,"w") 
+	file = open(outfile,"w") 
 	for i in range(50):
 		for node in seed_list:
 			file.write(node+"\n")
@@ -199,17 +199,86 @@ def main(filename, num_players, num_seeds, strategy = 'highest_degree'):
 	
 
 
- 
+def mainMixedStrategies(G, num_players, num_seeds, prob = 0.0, strategy = 'highest_degree'): 
+	print("STRATEGY:"+ strategy )
+	if strategy == 'highest_degree':
+		seeds = highest_degree(num_players, num_seeds, G)
+		
+	elif strategy == 'betweenness_centrality':
+		seeds = betweenness_centrality(num_players, num_seeds, G)
+
+	elif strategy == 'current_flow_betweenness_centrality':
+		seeds = current_flow_betweenness_centrality(num_players, num_seeds, G)
+
+	elif strategy == 'degree_centrality':
+		seeds = betweenness_centrality(num_players, num_seeds, G)
+
+	elif strategy == 'closeness_centrality':
+		seeds = closeness_centrality(num_players, num_seeds, G)
+
+	elif strategy == 'current_flow_closeness_centrality':
+		seeds = current_flow_closeness_centrality(num_players, num_seeds, G)
+
+	elif strategy == 'eigenvector_centrality':
+		seeds = eigenvector_centrality(num_players, num_seeds, G)
+
+	elif strategy == 'load_centrality':
+		seeds = load_centrality(num_players, num_seeds, G)
+
+	elif strategy == 'only_max_clique':
+		seeds = only_max_clique(num_seeds, G)
+
+	elif strategy == 'top_cliques':
+		seeds = top_cliques(num_seeds, G)
+
+	elif strategy == 'dom_set':
+		seeds = dominating_set(num_seeds, G)
+
+	print("STRATEGY:"+ strategy + " SEEDS: ", seeds)
+	return seeds 
+
+
 if __name__ == '__main__':
 	num_players = 1
-	num_seeds = 35
-	filename = 'pandemaniac_sim/8.35.2.json'
-	# all_strats = ['only_max_clique', 'top_cliques', 'dom_set','highest_degree', 'betweenness_centrality', \
-	# 	'degree_centrality', 'closeness_centrality', \
-	# 	'eigenvector_centrality', 'katz_centrality', 'load_centrality']
-	all_strats = ['highest_degree']
-	for strat in all_strats:
-		main(filename, num_players, num_seeds, strat)
+	NUM_SEEDS = 35
+	filename = 'pandemaniac_sim/testgraph1.json'
+	# all_strats = [
+	# 	'only_max_clique', 
+	#	'top_cliques', 
+	# 	'dom_set',
+	# 	'highest_degree', \
+	# 	'betweenness_centrality', \
+	# 	'degree_centrality', 
+	# 	'closeness_centrality', \
+	# 	'eigenvector_centrality', 
+	# 	'katz_centrality', 
+	#	'load_centrality']
 
+	# all_strats = ['highest_degree']
+	# for strat in all_strats:
+	# 	main(filename, num_players, num_seeds, strat)
+	prob = 0.0
+	graph = import_graph(filename, prob)
+	# nodeSet = set()
+	topNodeOccurrences = {}
+	chosenStrats = ['top_cliques', 'dom_set', 'highest_degree', \
+		'betweenness_centrality', 'degree_centrality', 'closeness_centrality', \
+		'eigenvector_centrality', 'load_centrality']
 
+	for strat in chosenStrats: 
+		seeds = mainMixedStrategies(graph, num_players, NUM_SEEDS, prob, strat)
+		for seed in seeds: 
+			if seed in topNodeOccurrences: 
+				topNodeOccurrences[seed] += 1
+			else: 
+				topNodeOccurrences[seed] = 1
+			# nodeSet.add(seed)
 
+	listOfTopNodes = sorted(topNodeOccurrences.items(), key=topNodeOccurrences.get)
+	# print(listOfTopNodes)
+	chosenSeeds = []
+	random.shuffle(listOfTopNodes[0:min(len(listOfTopNodes), NUM_SEEDS*2)])
+	for i in range(NUM_SEEDS): 
+		chosenSeeds.append(listOfTopNodes[i][0])
+	# print(chosenSeeds)
+	write_seeds(chosenSeeds, "output.txt")
